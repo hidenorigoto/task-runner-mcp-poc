@@ -13,10 +13,13 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { Logger, LogLevel } from './logger/index.js';
 import { taskTools } from './tools/index.js';
+import { WorkflowTools } from './workflow/tools.js';
 
 class TaskRunnerMCPServer {
   private server: Server;
   private logger: Logger;
+  private workflowTools: WorkflowTools;
+  private allTools: any[];
 
   constructor() {
     this.logger = new Logger({
@@ -24,6 +27,12 @@ class TaskRunnerMCPServer {
       consoleOutput: true,
       fileOutput: true,
     });
+    
+    // Initialize workflow tools
+    this.workflowTools = new WorkflowTools(this.logger);
+    
+    // Combine task tools and workflow tools
+    this.allTools = [...taskTools, ...this.workflowTools.getTools()];
     
     this.server = new Server(
       {
@@ -50,7 +59,7 @@ class TaskRunnerMCPServer {
       });
 
       return {
-        tools: taskTools.map(tool => ({
+        tools: this.allTools.map(tool => ({
           name: tool.name,
           description: tool.description,
           inputSchema: tool.inputSchema,
@@ -68,7 +77,7 @@ class TaskRunnerMCPServer {
         params: { name, arguments: args },
       });
 
-      const tool = taskTools.find(t => t.name === name);
+      const tool = this.allTools.find(t => t.name === name);
       if (!tool) {
         throw new McpError(
           ErrorCode.MethodNotFound,
