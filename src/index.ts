@@ -24,7 +24,7 @@ class TaskRunnerMCPServer {
   constructor() {
     this.logger = new Logger({
       logLevel: LogLevel.INFO,
-      consoleOutput: true,
+      consoleOutput: false, // Must be false for MCP stdio protocol
       fileOutput: true,
     });
     
@@ -160,6 +160,9 @@ class TaskRunnerMCPServer {
     try {
       await this.server.connect(transport);
       this.logger.info('MCP Server connected and ready for requests');
+      
+      // The MCP server will now run until the connection is closed
+      // No need for process.stdin.resume() as the transport handles the connection
     } catch (error) {
       this.logger.error('Failed to start MCP Server', error);
       throw error;
@@ -170,11 +173,20 @@ class TaskRunnerMCPServer {
 export async function main(): Promise<void> {
   const server = new TaskRunnerMCPServer();
   await server.start();
+  
+  // Keep the process running
+  // The server will exit when the stdio connection is closed
+  await new Promise(() => {
+    // This promise never resolves, keeping the process alive
+  });
 }
 
+// Auto-start server when run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch((error) => {
-    console.error('Failed to start server:', error);
+    // For MCP servers, we must not output to stdout as it's used for JSON-RPC
+    // Only use stderr for error messages
+    process.stderr.write(`Failed to start server: ${error}\n`);
     process.exit(1);
   });
 }
