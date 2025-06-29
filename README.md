@@ -2,6 +2,8 @@
 
 A Model Context Protocol (MCP) server for managing AI agent task workflows with structured 6-phase development processes.
 
+**MCP Protocol Version**: 2025-06-18 | **SDK**: TypeScript
+
 ## Overview
 
 This MCP server provides Claude Code with structured workflow management capabilities, ensuring consistent and high-quality development processes. It implements a comprehensive 6-phase workflow system that guides development from issue start to completion with built-in quality checks and progress tracking.
@@ -14,6 +16,8 @@ This MCP server provides Claude Code with structured workflow management capabil
 - **Production-Ready Logging**: Complete JSONL logging of all operations
 - **Type-Safe Implementation**: Full TypeScript with Zod validation
 - **Extensive Testing**: 130+ tests covering all scenarios
+- **Secure Transport**: Uses stdio transport with proper error handling
+- **Protocol Compliance**: Follows MCP specification with JSON-RPC 2.0
 
 ## Quick Start
 
@@ -79,20 +83,32 @@ Add to your Claude Code MCP configuration file:
 ```
 
 **Configuration file locations:**
-- **macOS**: `~/Library/Application Support/Claude/claude_code_config.json`
-- **Linux**: `~/.config/claude/claude_code_config.json`
-- **Windows**: `%APPDATA%\\Claude\\claude_code_config.json`
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Linux**: `~/.config/claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\\Claude\\claude_desktop_config.json`
 
-### Starting the Server
+**Note**: The exact configuration file name may vary. Check your Claude Code installation for:
+- `claude_desktop_config.json`
+- `config.json`
+- `mcp.json`
 
-#### Development Mode
-```bash
-npm run dev
-```
+### Building the Server
 
-#### Production Mode
+Before using with Claude Code, build the server:
+
 ```bash
 npm run build
+```
+
+**Note**: Claude Code will automatically start the MCP server when configured. You don't need to run it manually.
+
+#### Manual Testing (Optional)
+For development or testing outside of Claude Code:
+```bash
+# Development mode with hot reload
+npm run dev
+
+# Production mode
 npm start
 ```
 
@@ -293,28 +309,38 @@ grep '"workflowState"' logs/mcp-*.jsonl | jq '.workflowState'
 
 ### Common Issues
 
-#### 1. "Unknown tool" Error
+#### 1. "Connection closed" Error
+**Problem**: MCP server connection fails immediately
+**Solution**:
+- Ensure the server is built: `npm run build`
+- Check if `dist/index.js` exists
+- Verify the path in MCP configuration is absolute
+- Check Claude Code logs for detailed error messages
+- Try running the server manually: `node dist/index.js`
+
+#### 2. "Unknown tool" Error
 **Problem**: Claude Code cannot find workflow tools
 **Solution**:
-- Verify MCP server is running: `npm run dev`
+- Ensure the server is built: `npm run build`
 - Check Claude Code MCP configuration
 - Ensure `CLAUDE_CODE_MCP_ENABLED=1` is set
+- Restart Claude Code after configuration changes
 
-#### 2. "Workflow already in progress" Error
+#### 3. "Workflow already in progress" Error
 **Problem**: Trying to start new workflow when one exists
 **Solution**:
 - Check current status: `get_workflow_status()`
 - Complete current workflow or reset if needed
 - Only one workflow can be active at a time
 
-#### 3. "Phase mismatch" Error
+#### 4. "Phase mismatch" Error
 **Problem**: Trying to complete wrong phase
 **Solution**:
 - Check current phase: `get_current_phase()`
 - Ensure `phaseName` matches current phase
 - Follow phase sequence: issue_start → implementation → quality_check → pr_creation → completion
 
-#### 4. TypeScript/Build Errors
+#### 5. TypeScript/Build Errors
 **Problem**: Compilation failures
 **Solution**:
 ```bash
@@ -323,7 +349,7 @@ npm run lint       # Check for linting issues
 npm run build      # Attempt build with error details
 ```
 
-#### 5. Test Failures
+#### 6. Test Failures
 **Problem**: Tests not passing
 **Solution**:
 ```bash
@@ -340,6 +366,15 @@ NODE_ENV=development npm run dev
 ```
 
 This provides additional debug information in console output.
+
+### Security Considerations
+
+When deploying this MCP server:
+- **Input Validation**: All tool inputs are validated using Zod schemas
+- **Error Handling**: Comprehensive error handling prevents information leakage
+- **Transport Security**: Uses stdio transport which is isolated from network
+- **File Access**: Limited to project directory for workflow operations
+- **No External Network Access**: Server operates locally only
 
 ### Getting Help
 
@@ -403,8 +438,25 @@ Errors are logged with full context and returned as MCP error responses.
 
 MIT License - see LICENSE file for details.
 
-## Related
+## Related Resources
 
+### Documentation
 - [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
-- [MCP SDK Documentation](https://github.com/modelcontextprotocol/typescript-sdk)
+- [MCP Protocol Specification v2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/basic)
+- [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
+
+### MCP SDK Support
+MCP officially supports SDKs in multiple languages:
+- **TypeScript** (used in this project)
+- Python
+- C#
+- Java
+- Kotlin
+- Ruby
+- Swift
+
+### Transport Options
+MCP supports multiple transport mechanisms:
+- **stdio** (used in this project) - For local process communication
+- **HTTP with SSE** - For network-based communication
